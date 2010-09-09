@@ -1,0 +1,5 @@
+--- 
+title: My First Blog
+date: 09/09/2010
+
+This is my first blog, please feel free to add comments!

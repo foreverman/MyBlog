@@ -1,4 +1,4 @@
-equire 'coderay'
+require 'coderay'
 require 'rack/codehighlighter'
 require 'toto'
 

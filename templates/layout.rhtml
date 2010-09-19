@@ -4,10 +4,17 @@
     <link rel="stylesheet" type="text/css" href="/css/main.css" />
     <link rel="stylesheet" type="text/css" href="/css/coderay.css" />
     <link rel="alternate" type="application/atom+xml" title="<%= title %> - feed" href="/index.xml" />
+    <meta name="description" content="<%= context[:description] || 'Default description' %>">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/> 
     <title><%= title %></title>
   </head>
   <body>
+    <a href="http://github.com/foreverman">
+      <img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub" />
+    </a>
+    <div id="title">
+      <a href="/">Code Tinker</a>
+    </div>
     <section>
       <%= yield %> 
     </section>

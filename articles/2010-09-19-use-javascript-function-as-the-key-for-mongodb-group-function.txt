@@ -1,0 +1,65 @@
+--- 
+title: "use javascript function as the key for mongodb group function"
+date: 19/09/2010
+description: "Use javascript function as the key for mongodb group function"
+
+I have a collection to store some kind of alerts happened, it looks like this:
+    :::javascript
+    { created_at: "Wed Aug 11 2010 17:03:10 GMT+0800 (CDT)"
+    , msg: "something is wrong!"
+    , type: "error"
+    }
+I want to get a statistic report about how many errors or changes in each day in one month. The
+first thought I got is to use [group](http://www.mongodb.org/display/DOCS/Aggregation), it should be
+a simple 'group by date' version. But the difficult part is that mongomapper records the 'created_at'
+ in timestamp format, we can not just write this:
+
+    :::javascript
+    db.test.group(
+      { cond: {
+          "created_at": 
+            {
+              $gt: "Thu Aug 19 00:00:00 0800 2010 ", 
+              $lt: "Sun Sep 19 23:59:59 0800 2010"
+            }
+        }
+      , key: {created_at: true}
+      , initial: {errors_count: 0, changes_count: 0}
+      , reduce: function(doc, out) {
+        if(doc.type == 'error') 
+          out.errors_count++; 
+        else 
+          out.changes_count++;
+        }
+      , finalize: {}
+    )
+    
+But it turns out 'key' in group function is not limited to the keys in document, we can use the javascript
+function as the key. The group by date code looks like this(mongomapper):
+
+    :::ruby
+    def history_report
+      key = %Q{function(doc) {
+        return {date:doc.created_at.toDateString()};
+      }}
+      reduce = %Q{
+        function(doc, out) {
+          if(doc.type == 'error')
+            out.errors_count++;
+          else
+            out.changes_count++;
+        }
+      }
+      result = Alert::Alert.collection.group(key, 
+        {
+          :created_at => {
+          '$lte' => Time.current.end_of_day.utc, 
+          '$gte' => 30.days.ago.beginning_of_day.utc
+          }
+        },
+        {:errors_count => 0, :changes_count => 0}, 
+        reduce, true
+      )
+
+
+

@@ -108,3 +108,7 @@ body > footer {
   font-size: 18px;
   color: #888;
 }
+#title {
+	margin-bottom: 20px;
+	font-style: italic;
+}

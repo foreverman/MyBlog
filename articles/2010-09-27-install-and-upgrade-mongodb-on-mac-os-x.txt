@@ -1,0 +1,79 @@
+--- 
+title: "Install and upgrade mongoDB on mac os X"
+date: 27/09/2010
+description: "Install and upgrade mongoDB on mac os X"
+
+First this article is based on [this](http://shiftcommathree.com/articles/how-to-install-mongodb-on-os-x). I
+changed the steps in that article to be able to upgrade mongoDB in more manageable way.
+
+Download, unpack, and install the pre-compiled 64-bit binaries [here](http://www.mongodb.org/downloads):
+
+    curl -O http://fastdl.mongodb.org/osx/mongodb-osx-x86_64-1.6.3.tgz
+    tar xzf mongodb-osx-x86_64-1.6.3.tgz
+    sudo mv mongodb-osx-x86_64-1.6.3 /usr/local
+    
+Create the directories for hosting data and logs for mongoDB:
+
+    sudo mkdir /usr/local/mongodb_data /var/log/mongodb
+
+Setup the configuration for mongoDB: 
+    sudo mkdir /usr/local/mongodb_conf
+    
+Create a configuration file as: "/usr/local/mongodb_conf/mongod.conf"
+    # Store data alongside MongoDB instead of the default, /data/db/
+    dbpath = /usr/local/mongodb_data
+
+    # Only accept local connections
+    bind_ip = 127.0.0.1
+
+Create a symbolic link to connect to real mongoDB version:
+    ln -s /usr/local/mongodb-osx-x86_64-1.6.3 /usr/local/mongodb
+
+Next make a launchd job to register the server as an OS X daemon. Save as "/Library/LaunchDaemons/org.mongodb.mongod.plist"
+
+    :::xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+      "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+      <key>Label</key>
+      <string>org.mongodb.mongod</string>
+      <key>ProgramArguments</key>
+      <array>
+        <string>/usr/local/mongodb/bin/mongod</string>
+        <string>run</string>
+        <string>--config</string>
+        <string>/usr/local/mongodb_conf/mongod.conf</string>
+      </array>
+      <key>RunAtLoad</key>
+      <true/>
+      <key>KeepAlive</key>
+      <true/>
+      <key>WorkingDirectory</key>
+      <string>/usr/local/mongodb</string>
+      <key>StandardErrorPath</key>
+      <string>/var/log/mongodb/output.log</string>
+      <key>StandardOutPath</key>
+      <string>/var/log/mongodb/output.log</string>
+    </dict>
+    </plist>
+    
+Finally we need to start mongoDB server:
+    sudo launchctl load /Library/LaunchDaemons/org.mongodb.mongod.plist
+
+Next time, when you want to upgrade mongoDB, 
+
+Follow the the step one for installing mongoDB: download the latest version of mongoDB, unpack...
+
+Stop the mongoDB server by run the following command:
+    sudo launchctl unload /Library/LaunchDaemons/org.mongodb.mongod.plist
+    
+Relink '/usr/local/mongodb' to new mongoDB version:
+    ln -s /usr/local/mongodb-osx-x86_64-1.7.3 /usr/local/mongodb
+    
+Restart the server:
+    sudo launchctl load /Library/LaunchDaemons/org.mongodb.mongod.plist
+
+Your new mongoDB should use the data and log files created for previous version and run successfully.
+

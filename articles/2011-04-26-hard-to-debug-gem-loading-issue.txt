@@ -1,0 +1,30 @@
+--- 
+title: "hard to debug gem loading issue"
+date: 26/04/2011
+description: "Hard to debug gem loading issue"
+
+Recently I found a gem loading issue which is hard to debug, here is what it looks like on the surface:
+	ruby-1.8.7-p302 > :page_path.eql
+	NoMethodError: undefined method `eql' for :page_path:Symbol
+	from (irb):1
+
+It seems there is no 'eql' method for 'Symbol' class. But there is a gem called 'garb' which opens 'Symbol' class and defines 'eql' method, so what is going on? 
+
+After 20 minutes' debugging, I concluded that the 'garb' gem was loaded but the ruby file which defines 'eql' method wasn't loaded. There is a 'lib/garb.rb' file requiring 'lib/support.rb' which defines 'eql' method. So what is wrong with 'support.rb', why isn't it loaded?
+
+I guess there must be a ruby file with same name('support.rb') under the $LOAD_PATH. So I did a quick check under gems directory: `find . -type f -name 'support.rb'`, here is the output on my computer:
+	./garb-0.7.6/lib/support.rb
+	./haml-3.0.13/vendor/fssm/lib/fssm/support.rb
+	./haml-3.0.23/vendor/fssm/lib/fssm/support.rb
+	./haml-3.0.25/vendor/fssm/lib/fssm/support.rb
+	./mongo-1.1.5/lib/mongo/util/support.rb
+	./right_aws-1.10.0/lib/awsbase/support.rb
+	./right_http_connection-1.3.0/lib/support.rb
+
+Oh, we can see there are two 'support.rb' files under the root of $LOAD_PATH, one is under garb gem and the other one is under right_http_connection gem which is required by right_aws gem which we depend on. The right_http_connection gem must goes first in $LOAD_PATH, so the 'support.rb' under right_http_connection will be loaded when you 'require support'.
+
+After finding the culprit, I did a quick fix by uninstalling the '1.3.0' version of right_http_connection and reinstall '1.2.4' version which doesn't have a 'support.rb' file under the lib directory.
+
+Conclusion: I think the authors of both gems should put the 'support.rb' under the directory whose name should be gem's name, so there should be 'lib/garb/support.rb' in garb gem and 'lib/right_http_connection/support.rb' in right_http_connection gem. Basically, all the files under a gem should be namespaced under a directory whose name should be same as the name of gem.
+
+

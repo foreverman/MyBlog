@@ -1,24 +1,27 @@
 ---
-title: "remember to return after timecop travel"
+title: "Remember To Return After Timecop Travel"
 date: 05/09/2011
 description: "Remember to return after timecop travel"
 
 It can not be true when the total time of running the following test is 2678400.02 seconds:
-  it "should mess up running time without return" do
-    true.should be_true
-    Timecop.travel 31.days.since
-  end
+    :::ruby
+    it "should mess up running time without return" do
+      true.should be_true
+      Timecop.travel 31.days.since
+    end
 
 It turns out that we should call 'Timecop.return' after running the test so Timecop won't cheat rSpec of calculating correct running time. We can add an "after(:each)" callback into 'spec_helper'(in case we forget to return):
-  config.after(:each) do
-    Timecop.return
-  end        
+    :::ruby
+    config.after(:each) do
+      Timecop.return
+    end        
 
 An alternative is using 'Timecop.freeze' instead of 'Timecop.travel':
-  it "should not mess up running time without return" do
-    Timecop.freeze 31.days.since do
-      #do something
+    :::ruby
+    it "should not mess up running time without return" do
+      Timecop.freeze 31.days.since do
+        #do something
+      end
+      true.should be_true
     end
-    true.should be_true
-  end
 

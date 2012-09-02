@@ -1,0 +1,101 @@
+---
+title: "Flash And Dump Format Error"
+date: 02/09/2012
+description: "Flash and dump format error"
+
+Sometimes we got 'ArgumentError (dump format error)' error when accessing some pages of apps we developed,
+the reason is 'flash' is implemented differently in rails 3.0 and rails 3.1(or higher versions). Given there are two apps deployed under
+same domain: app1(rails 3.0.10), app2(rails 3.2), if we access a page in app2 which requires login, usually a flash alert will be written to notify
+login and user will be redirect to login page(assuming it is still in app2), then we will get the error if we try to access any page in app1.
+
+At first, I think 'flash' written in the first request should be cleared after user is redirect to login page, so we should get the error
+when we access any pages in app1.Apparently my assumption is wrong, here is how flash is implemented in rails(3.2.3):
+    :::ruby
+    class FlashHash
+      include Enumerable
+
+      def initialize #:nodoc:
+        @used    = Set.new
+        @closed  = false
+        @flashes = {}
+        @now     = nil
+      end
+
+      def []=(k, v) #:nodoc:
+        keep(k)
+        @flashes[k] = v
+      end
+
+      def [](k)
+        @flashes[k]
+      end
+
+      def keep(k = nil)
+        use(k, false)
+      end
+
+      def discard(k = nil)
+        use(k)
+      end
+      
+      def sweep #:nodoc:
+        keys.each do |k|
+          unless @used.include?(k)
+            @used << k
+          else
+            delete(k)
+            @used.delete(k)
+          end
+        end
+
+        # clean up after keys that could have been left over by calling reject! or shift on the flash
+        (@used - keys).each{ |k| @used.delete(k) }
+      end
+
+      def use(key = nil, used = true)
+        Array(key || keys).each { |k| used ? @used << k : @used.delete(k) }
+        return key ? self[key] : self
+      end
+
+      def call(env)
+        if (session = env['rack.session']) && (flash = session['flash'])
+          flash.sweep
+        end
+
+        @app.call(env)
+      ensure
+        session    = env['rack.session'] || {}
+        flash_hash = env[KEY]
+
+        if flash_hash
+          if !flash_hash.empty? || session.key?('flash')
+            session["flash"] = flash_hash
+            new_hash = flash_hash.dup
+          else
+            new_hash = flash_hash
+          end
+
+          env[KEY] = new_hash
+        end
+
+        if session.key?('flash') && session['flash'].empty?
+          session.delete('flash')
+        end
+      end
+    end
+      
+From the code, we can see that Flash is just like a hash, in addition, it allows you mark which keys are used and will be
+discarded in next action, which keys you want to keep in next action. Thinking about the above senario, flash will be changed in 
+the following sequences:
+
+when a request is sent to /app1/require_login_page, server will write flash message into session({:alert => 'need to sign in'}), then redirects to 
+/app1/signin;
+following the redirect, a request is sent to /app1/signin, before serving the request, server will delete any flash entries mared as used, and marks all the 
+existing flash entries as used, in this case, it is 'alert' message written in first request; so the alert message is just marked as used, it is not deleted yet;
+
+If user accesses /app2/any_page, server tries to load session, but it can not because the flash format is not compatible.
+
+In summary, any flash messages(except 'now' flash) written have to go through two requests to be cleared out.
+    
+
+

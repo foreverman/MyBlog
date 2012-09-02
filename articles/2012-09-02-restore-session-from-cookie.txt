@@ -3,10 +3,10 @@ title: "Restore Session from Cookie"
 date: 02/09/2012
 description: "Restore Session from Cookie"
 
-Rails uses cookie session store by default, but how can you restore the session given the cookie? To get the answer, we have to 
+In Rails(this article is based on rails 3.0.10), session is stored in cookie by default, but how can you restore the session given the cookie? To get the answer, we have to 
 take a look at how cookie session store is implemented in rails:
 
-Here is how rails generates the something from session and write cookie eventually:
+Here is how rails generates the something from session and write to cookie eventually:
     :::ruby
     module ActiveSupport
       class MessageVerifier
@@ -16,7 +16,7 @@ Here is how rails generates the something from session and write cookie eventual
         end
       end
     end
-Basically it serializes the session, encodes(base64) the serialization data, finally it writes the session in the format of "#{data}--#{generate_digest(data)}" where the 
+Basically it serializes the session, encodes(base64) the serialized data, finally it writes the session in the format of "#{data}--#{generate_digest(data)}" where the 
 'generate_digest(data)' is generated digest for serialized-and-encoded session based on a secret which is usually set in config/initializers/secret_token.rb. 
     
 
@@ -33,7 +33,7 @@ And here is how rails load session from cookie:
         raise InvalidSignature
       end
     end
-It reverses serialization-and-encode process, so it first decode the data from session in cookie, then loads/deserializes session. In addition, it checks integrity of session by comparing the generated
+It reverses serialization-and-encoding process, so it first decode the data from session in cookie, then deserializes session. In addition, it checks integrity of session by comparing the generated
 digest and digest in cookie(after "--").
 
 Given a session string stored in cookie: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx--yyyyyyyyyy", here is how to restore the session from it:
